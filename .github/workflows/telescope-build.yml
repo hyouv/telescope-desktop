@@ -72,6 +72,20 @@ jobs:
           git config --global user.email "telescope-bot@users.noreply.github.com"
           git config --global user.name "telescope-bot"
 
+      # The runner's VS has the 14.44 toolset but not its ATL headers, which breakpad needs.
+      - &atl
+        name: ATL for toolset 14.44
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          $hasAtl = { @(Get-ChildItem "$vs\VC\Tools\MSVC\14.44.*\atlmfc\include\atlbase.h" -ErrorAction SilentlyContinue).Count -gt 0 }
+          if (& $hasAtl) { "ATL already installed"; exit 0 }
+          $p = Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -Wait -PassThru -ArgumentList `
+            'modify','--installPath',"`"$vs`"",'--add','Microsoft.VisualStudio.Component.VC.14.44.17.14.ATL', `
+            '--quiet','--norestart','--nocache'
+          "vs_installer exit code $($p.ExitCode)"
+          if (-not (& $hasAtl)) { Write-Error "atlbase.h for 14.44 still missing"; exit 1 }
+
       - &msvc
         uses: Eden-CI/msvc-dev-cmd@1bd71f95d6f3d1b2b3395b335cc63bcdc90cf223
         with:
@@ -151,6 +165,7 @@ jobs:
       - *dirs
       - *checkout
       - *setup
+      - *atl
       - *msvc
       - *nuget
 
