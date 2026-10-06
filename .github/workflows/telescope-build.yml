@@ -60,6 +60,8 @@ jobs:
         id: setup
         shell: bash
         run: |
+          # MSYS2 dropped mingw-w64-x86_64-diffutils; the msys package provides the same diff.
+          sed -i 's/mingw-w64-x86_64-diffutils/diffutils/' $REPO/$PREPARE_PATH
           DOC=$REPO/docs/building-win.md
           SDK="$(grep "SDK version" $DOC | sed -r 's/.*\*\*(.*)\*\* SDK version.*/\1/')"
           echo "SDK=$SDK" >> $GITHUB_ENV
