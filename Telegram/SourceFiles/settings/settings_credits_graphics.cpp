@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/settings_credits_graphics.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_chat_invite.h"
 #include "api/api_credits.h"
@@ -979,6 +980,9 @@ void ProcessReceivedSubscriptions(
 [[nodiscard]] bool ShowResellButton(
 		not_null<Main::Session*> session,
 		const Data::CreditsHistoryEntry &e) {
+	if (Telescope::kHideCollectibles) {
+		return false;
+	}
 	const auto unique = e.uniqueGift.get();
 	const auto host = (unique && unique->hostId)
 		? session->data().peer(unique->hostId).get()
@@ -997,6 +1001,9 @@ void ProcessReceivedSubscriptions(
 [[nodiscard]] bool CanResellGift(
 		not_null<Main::Session*> session,
 		const Data::CreditsHistoryEntry &e) {
+	if (Telescope::kHideCollectibles) {
+		return false;
+	}
 	const auto unique = e.uniqueGift.get();
 	const auto owner = (unique && unique->ownerId)
 		? session->data().peer(unique->ownerId).get()
@@ -1014,7 +1021,7 @@ void ProcessReceivedSubscriptions(
 		not_null<Main::Session*> session,
 		const Data::CreditsHistoryEntry &e) {
 	const auto unique = e.uniqueGift.get();
-	if (!unique || !unique->craftChancePermille) {
+	if (!unique || !unique->craftChancePermille || Telescope::kHideCollectibles) {
 		return false;
 	}
 	const auto owner = (unique && unique->ownerId)
@@ -1032,6 +1039,9 @@ void ProcessReceivedSubscriptions(
 [[nodiscard]] bool ShowOfferBuyButton(
 		not_null<Main::Session*> session,
 		const Data::CreditsHistoryEntry &e) {
+	if (Telescope::kHideCollectibles) {
+		return false;
+	}
 	const auto unique = e.uniqueGift.get();
 	const auto owner = (unique && unique->ownerId)
 		? session->data().peer(unique->ownerId).get()
@@ -1194,7 +1204,8 @@ void FillUniqueGiftMenu(
 			}
 		}, st.craft ? st.craft : &st::menuIconCraft);
 	}
-	const auto transfer = savedId
+	const auto transfer = !Telescope::kHideCollectibles
+		&& savedId
 		&& (savedId.isUser() ? e.in : savedId.chat()->canTransferGifts())
 		&& (unique->starsForTransfer >= 0);
 	if (transfer) {
@@ -1206,7 +1217,9 @@ void FillUniqueGiftMenu(
 			}
 		}, st.transfer ? st.transfer : &st::menuIconReplace);
 	}
-	const auto wear = host->isSelf()
+	const auto wear = Telescope::kHideCollectibles
+		? false
+		: host->isSelf()
 		? e.in
 		: (host->isChannel() && host->asChannel()->canEditEmoji());
 	if (wear) {
@@ -1639,7 +1652,9 @@ void GenericCreditsEntryBody(
 		&& starGiftSender;
 	const auto canConvert = forConvert && !timeExceeded;
 	const auto inResale = uniqueGift && (uniqueGift->starsForResale > 0);
-	const auto canBuyResold = inResale && (e.bareGiftOwnerId != selfPeerId);
+	const auto canBuyResold = !Telescope::kHideCollectibles
+		&& inResale
+		&& (e.bareGiftOwnerId != selfPeerId);
 	const auto &stUser = st::boostReplaceUserpic;
 	const auto isPrize = e.bareGiveawayMsgId > 0;
 	const auto starGiftSticker = (isStarGift && e.bareGiftStickerId)
@@ -2111,12 +2126,14 @@ void GenericCreditsEntryBody(
 		ToggleStarGiftSaved(show, savedId, save, done);
 	};
 
-	const auto canUpgrade = e.stargiftId
+	const auto canUpgrade = !Telescope::kHideCollectibles
+		&& e.stargiftId
 		&& e.canUpgradeGift
 		&& (e.in || giftToSelf || giftToChannelCanManage)
 		&& !e.uniqueGift;
 	const auto canUpgradeFree = canUpgrade && (e.starsUpgradedBySender > 0);
-	const auto canGiftUpgrade = !e.uniqueGift
+	const auto canGiftUpgrade = !Telescope::kHideCollectibles
+		&& !e.uniqueGift
 		&& !e.in
 		&& !e.giftPrepayUpgradeHash.isEmpty();
 	const auto canRemoveDetails = UniqueGiftCanRemoveDetails(e);

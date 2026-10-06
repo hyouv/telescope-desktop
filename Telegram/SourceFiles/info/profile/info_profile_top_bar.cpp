@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_top_bar.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_peer_colors.h"
 #include "api/api_peer_photo.h"
@@ -3415,6 +3416,9 @@ void TopBar::paintAnimatedPattern(
 
 void TopBar::setupPinnedToTopGifts(
 		not_null<Window::SessionController*> controller) {
+	if (Telescope::kHideProfileGifts) {
+		return;
+	}
 	const auto requestDone = crl::guard(this, [=](
 			std::vector<Data::SavedStarGift> gifts) {
 		const auto shouldHideFirst = _pinnedToTopGiftsFirstTimeShowed

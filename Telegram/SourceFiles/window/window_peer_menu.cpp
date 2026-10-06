@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/window_peer_menu.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "base/call_delayed.h"
 #include "menu/menu_check_item.h"
@@ -655,7 +656,7 @@ void Filler::addInfo() {
 
 void Filler::addStoryArchive() {
 	const auto channel = _peer ? _peer->asChannel() : nullptr;
-	if (!channel || !channel->canEditStories()) {
+	if (!channel || !channel->canEditStories() || Telescope::kHideStories) {
 		return;
 	}
 	const auto controller = _controller;
@@ -1293,7 +1294,7 @@ void Filler::addManageChat() {
 
 void Filler::addBoostChat() {
 	if (const auto channel = _peer->asChannel()) {
-		if (channel->isMonoforum()) {
+		if (channel->isMonoforum() || Telescope::kHideMonetization) {
 			return;
 		}
 		const auto text = channel->isMegagroup()
@@ -1329,16 +1330,18 @@ void Filler::addViewStatistics() {
 				}
 			}, &st::menuIconStats);
 		}
-		if (canGetStats
-			|| channel->amCreator()
-			|| channel->canPostStories()) {
+		if (!Telescope::kHideMonetization
+			&& (canGetStats
+				|| channel->amCreator()
+				|| channel->canPostStories())) {
 			_addAction(tr::lng_boosts_title(tr::now), [=] {
 				if ([[maybe_unused]] const auto strong = weak.get()) {
 					controller->showSection(Info::Boosts::Make(peer));
 				}
 			}, &st::menuIconBoosts);
 		}
-		if (canViewEarn || canViewCreditsEarn) {
+		if (!Telescope::kHideMonetization
+			&& (canViewEarn || canViewCreditsEarn)) {
 			_addAction(tr::lng_channel_earn_title(tr::now), [=] {
 				if ([[maybe_unused]] const auto strong = weak.get()) {
 					controller->showSection(Info::ChannelEarn::Make(peer));

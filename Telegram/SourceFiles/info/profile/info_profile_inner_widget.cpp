@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_inner_widget.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "info/info_controller.h"
 #include "info/info_memento.h"
@@ -312,8 +313,10 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 			tabs.push_back(MakeChatsTabDescriptor());
 		}
 		if (!_topic && !_savedMessages) {
-			tabs.push_back(MakeStoriesTabDescriptor(tabsPeer));
-			if (!_sublist) {
+			if (!Telescope::kHideStories) {
+				tabs.push_back(MakeStoriesTabDescriptor(tabsPeer));
+			}
+			if (!_sublist && !Telescope::kHideProfileGifts) {
 				tabs.push_back(MakeGiftsTabDescriptor(_peer));
 			}
 		}

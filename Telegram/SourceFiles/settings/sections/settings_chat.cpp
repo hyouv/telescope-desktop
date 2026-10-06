@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_chat.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "settings/settings_common_session.h"
 
@@ -2735,11 +2736,13 @@ void SetupThemeSettings(
 		} });
 	}
 
-	AddPeerColorButton(
-		container,
-		controller->uiShow(),
-		controller->session().user(),
-		st::settingsColorButton);
+	if (!Telescope::kHidePeerColors) {
+		AddPeerColorButton(
+			container,
+			controller->uiShow(),
+			controller->session().user(),
+			st::settingsColorButton);
+	}
 
 	const auto settings = &Core::App().settings();
 	if (settings->systemDarkMode().has_value()) {

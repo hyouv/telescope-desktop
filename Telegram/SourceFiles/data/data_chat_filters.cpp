@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_chat_filters.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_text_entities.h"
 #include "history/history.h"
@@ -421,7 +422,7 @@ void ChatFilters::setPreloaded(
 		const QVector<MTPDialogFilter> &result,
 		bool tagsEnabled) {
 	_loadRequestId = -1;
-	_tagsEnabled = tagsEnabled;
+	_tagsEnabled = tagsEnabled && !Telescope::kHideFolderTags;
 	received(result);
 	crl::on_main(&_owner->session(), [=] {
 		if (_loadRequestId == -1) {
@@ -447,7 +448,7 @@ void ChatFilters::load(bool force) {
 	api.request(_loadRequestId).cancel();
 	_loadRequestId = api.request(MTPmessages_GetDialogFilters(
 	)).done([=](const MTPmessages_DialogFilters &result) {
-		_tagsEnabled = result.data().is_tags_enabled();
+		_tagsEnabled = result.data().is_tags_enabled() && !Telescope::kHideFolderTags;
 		received(result.data().vfilters().v);
 		_loadRequestId = 0;
 	}).fail([=] {
@@ -478,7 +479,7 @@ void ChatFilters::requestToggleTags(bool value, Fn<void()> fail) {
 	_toggleTagsRequestId = _owner->session().api().request(
 		MTPmessages_ToggleDialogFilterTags(MTP_bool(value))
 	).done([=](const MTPBool &result) {
-		_tagsEnabled = value;
+		_tagsEnabled = value && !Telescope::kHideFolderTags;
 		_toggleTagsRequestId = 0;
 	}).fail([=](const MTP::Error &error) {
 		const auto message = error.type();

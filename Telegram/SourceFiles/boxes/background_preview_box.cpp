@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/background_preview_box.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "base/unixtime.h"
 #include "boxes/peers/edit_peer_color_box.h"
@@ -720,7 +721,9 @@ void BackgroundPreviewBox::applyForPeer() {
 	if (forChannel()) {
 		checkLevelForChannel();
 		return;
-	} else if (_fromMessageId || !_forPeer->session().premiumPossible()) {
+	} else if (_fromMessageId
+		|| !_forPeer->session().premiumPossible()
+		|| Telescope::kHideWallpaperForBoth) {
 		applyForPeer(false);
 		return;
 	} else if (_forBothOverlay) {

@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "main/main_session.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "apiwrap.h"
 #include "api/api_peer_colors.h"
@@ -284,7 +285,7 @@ void Session::appConfigRefreshed() {
 	};
 
 #ifndef OS_MAC_STORE
-	_premiumPossible = !config.get<bool>(
+	_premiumPossible = !Telescope::kHidePremium && !config.get<bool>(
 		u"premium_purchase_blocked"_q,
 		true);
 #endif // OS_MAC_STORE
@@ -359,7 +360,7 @@ bool Session::premiumPossible() const {
 }
 
 bool Session::premiumBadgesShown() const {
-	return supportMode() || premiumPossible();
+	return !Telescope::kHidePremiumBadge && (supportMode() || premiumPossible());
 }
 
 rpl::producer<bool> Session::premiumPossibleValue() const {

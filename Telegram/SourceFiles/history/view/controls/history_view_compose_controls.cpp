@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/controls/history_view_compose_controls.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "base/call_delayed.h"
 #include "base/event_filter.h"
@@ -5508,7 +5509,8 @@ void ComposeControls::refreshSendGiftToggle() {
 		| Type::Unlimited
 		| Type::Limited
 		| Type::Unique;
-	const auto has = _regularWindow
+	const auto has = !Telescope::kHideGifts
+		&& _regularWindow
 		&& user
 		&& !_writeRestriction.current()
 		&& !user->isServiceUser()

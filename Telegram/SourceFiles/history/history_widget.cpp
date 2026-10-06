@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
@@ -3902,7 +3903,8 @@ void HistoryWidget::refreshSendGiftToggle() {
 		| Type::Unlimited
 		| Type::Limited
 		| Type::Unique;
-	const auto has = user
+	const auto has = !Telescope::kHideGifts
+		&& user
 		&& _canSendMessages
 		&& !user->isServiceUser()
 		&& !user->isSelf()

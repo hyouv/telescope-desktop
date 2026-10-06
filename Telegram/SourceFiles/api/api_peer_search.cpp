@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_peer_search.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_single_message_search.h"
 #include "apiwrap.h"
@@ -53,7 +54,7 @@ void PeerSearch::request(
 	}
 	cache.requested = true;
 	cache.result.query = _query;
-	if (_query.size() < kMinSponsoredQueryLength) {
+	if (_query.size() < kMinSponsoredQueryLength || Telescope::kHideSponsored) {
 		cache.sponsoredReady = true;
 	} else if (_type == Type::WithSponsored) {
 		requestSponsored();

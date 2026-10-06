@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/filters/edit_filter_box.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "apiwrap.h"
 #include "base/event_filter.h"
@@ -806,7 +807,9 @@ void EditFilterBox(
 				session->data().chatsFilters().tagsEnabledValue(),
 				Data::AmPremiumValue(session)
 			) | rpl::map([=] (bool possible, bool tagsEnabled, bool premium) {
-				return possible && (tagsEnabled || !premium);
+				return !Telescope::kHideFolderTags
+					&& possible
+					&& (tagsEnabled || !premium);
 			}),
 			anim::type::instant);
 

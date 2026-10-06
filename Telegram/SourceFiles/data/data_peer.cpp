@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_peer.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_sensitive_content.h"
 #include "data/data_user.h"
@@ -1511,7 +1512,7 @@ void PeerData::setEmojiStatus(EmojiStatusId emojiStatusId, TimeId until) {
 }
 
 EmojiStatusId PeerData::emojiStatusId() const {
-	return _emojiStatusId;
+	return Telescope::kHideEmojiStatus ? EmojiStatusId() : _emojiStatusId;
 }
 
 bool PeerData::isBot() const {

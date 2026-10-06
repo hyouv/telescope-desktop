@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "payments/payments_reaction_process.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_credits.h"
 #include "api/api_global_privacy.h"
@@ -51,6 +52,12 @@ void TryAddingPaidReaction(
 		int count,
 		std::optional<PeerId> shownPeer,
 		Fn<void(bool)> finished) {
+	if (Telescope::kHideStars) {
+		if (finished) {
+			finished(false);
+		}
+		return;
+	}
 	const auto owner = &show->session().data();
 	const auto checkItem = [=] {
 		const auto item = owner->message(itemId);
@@ -165,6 +172,9 @@ void ShowPaidReactionDetails(
 	Expects(item->history()->peer->isBroadcast()
 		|| item->isDiscussionPost());
 
+	if (Telescope::kHideStars) {
+		return;
+	}
 	const auto show = controller->uiShow();
 	const auto itemId = item->fullId();
 	const auto session = &item->history()->session();

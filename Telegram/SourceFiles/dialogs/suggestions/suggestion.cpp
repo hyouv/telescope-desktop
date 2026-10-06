@@ -6,11 +6,17 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/suggestions/suggestion.h"
+#include "telescope/telescope.h" // Telescope
 
 namespace Dialogs::TopBarSuggestions {
 
 std::vector<Spec> AllSpecs() {
 	auto result = std::vector<Spec>();
+	if (Telescope::kHideDialogsHints) {
+		result.push_back(MakePremiumGraceSpec());
+		result.push_back(MakeUnreviewedAuthSpec());
+		return result;
+	}
 	result.push_back(MakeBirthdayContactsSpec());
 	result.push_back(MakeBirthdaySetupSpec());
 	result.push_back(MakeCustomPromoSpec());

@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "data/data_peer.h"
+#include "telescope/telescope.h" // Telescope
 #include "data/data_pts_waiter.h"
 #include "data/data_location.h"
 #include "data/data_chat_participant_status.h"
@@ -285,7 +286,7 @@ public:
 		return flags() & Flag::ViewAsMessages;
 	}
 	[[nodiscard]] bool stargiftsAvailable() const {
-		return flags() & Flag::StargiftsAvailable;
+		return !Telescope::kHideGifts && (flags() & Flag::StargiftsAvailable);
 	}
 	[[nodiscard]] bool paidMessagesAvailable() const {
 		return flags() & Flag::PaidMessagesAvailable;

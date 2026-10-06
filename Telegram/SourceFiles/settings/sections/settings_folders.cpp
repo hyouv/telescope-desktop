@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_folders.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_chat_filters.h"
 #include "apiwrap.h"
@@ -994,7 +995,7 @@ void BuildFoldersListSection(
 }
 
 void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
-	if (!builder.session()->premiumPossible()) {
+	if (!builder.session()->premiumPossible() || Telescope::kHideFolderTags) {
 		return;
 	}
 
@@ -1307,7 +1308,7 @@ const auto kMeta = BuildHelper({
 		};
 	});
 
-	if (builder.session()->premiumPossible()) {
+	if (builder.session()->premiumPossible() && !Telescope::kHideFolderTags) {
 		builder.add(nullptr, [] {
 			return SearchEntry{
 				.id = u"folders/show-tags"_q,

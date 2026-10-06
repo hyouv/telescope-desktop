@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_user.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_credits.h"
 #include "api/api_global_privacy.h"
@@ -228,11 +229,11 @@ void UserData::setPrivateForwardName(const QString &name) {
 }
 
 bool UserData::hasActiveStories() const {
-	return flags() & Flag::HasActiveStories;
+	return !Telescope::kHideStories && (flags() & Flag::HasActiveStories);
 }
 
 bool UserData::hasUnreadStories() const {
-	return flags() & Flag::HasUnreadStories;
+	return !Telescope::kHideStories && (flags() & Flag::HasUnreadStories);
 }
 
 bool UserData::hasActiveVideoStream() const {

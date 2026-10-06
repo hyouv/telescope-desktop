@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_stories.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "base/unixtime.h"
 #include "apiwrap.h"
@@ -238,6 +239,9 @@ Main::Session &Stories::session() const {
 }
 
 void Stories::apply(const MTPDupdateStory &data) {
+	if (Telescope::kHideStories) {
+		return;
+	}
 	const auto peerId = peerFromMTP(data.vpeer());
 	const auto peer = _owner->peer(peerId);
 	const auto now = base::unixtime::now();
@@ -305,7 +309,7 @@ void Stories::apply(not_null<PeerData*> peer, const MTPPeerStories *data) {
 		_all.erase(peer->id);
 		_sourceChanged.fire_copy(peer->id);
 		updatePeerStoriesState(peer);
-	} else {
+	} else if (!Telescope::kHideStories) {
 		parseAndApply(*data, ParseSource::DirectRequest);
 	}
 }
@@ -338,6 +342,9 @@ void Stories::requestPeerStories(
 			}
 		}
 	};
+	if (Telescope::kHideStories) {
+		return finish();
+	}
 	_owner->session().api().request(MTPstories_GetPeerStories(
 		peer->input()
 	)).done([=](const MTPstories_PeerStories &result) {
@@ -720,6 +727,9 @@ void Stories::savedStateChanged(not_null<Story*> story) {
 void Stories::loadMore(StorySourcesList list) {
 	const auto index = static_cast<int>(list);
 	if (_loadMoreRequestId[index] || _sourcesLoaded[index]) {
+		return;
+	} else if (Telescope::kHideStories) {
+		_sourcesLoaded[index] = true;
 		return;
 	}
 	const auto hidden = (list == StorySourcesList::Hidden);
@@ -1780,6 +1790,9 @@ void Stories::albumIdsLoadMore(PeerId peerId, int albumId) {
 void Stories::albumIdsLoadMore(PeerId peerId, int albumId, bool reload) {
 	Expects(!reload || albumId > 0);
 
+	if (Telescope::kHideStories) {
+		return;
+	}
 	const auto peer = _owner->peer(peerId);
 	const auto set = albumIdsSet(peerId, albumId);
 	if (set && reload) {

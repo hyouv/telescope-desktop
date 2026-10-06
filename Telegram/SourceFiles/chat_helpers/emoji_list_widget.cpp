@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/emoji_list_widget.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "window/window_media_preview.h"
 #include "api/api_peer_photo.h"
@@ -3621,7 +3622,9 @@ void EmojiListWidget::refreshCustom() {
 		push(setId, true);
 	}
 	for (const auto setId : owner->stickers().featuredEmojiSetsOrder()) {
-		push(setId, false);
+		if (!Telescope::kHideEmojiSuggestions) {
+			push(setId, false);
+		}
 	}
 	refreshMegagroupStickers(push, GroupStickersPlace::Hidden);
 

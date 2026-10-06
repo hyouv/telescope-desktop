@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_message_reactions.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_global_privacy.h"
 #include "calls/group/calls_group_call.h"
@@ -200,7 +201,8 @@ PossibleItemReactionsRef LookupPossibleReactions(
 	const auto &myTags = reactions->list(Reactions::Type::MyTags);
 	const auto &tags = reactions->list(Reactions::Type::Tags);
 	const auto &all = item->reactions();
-	const auto &allowed = PeerAllowedReactions(peer);
+	auto allowed = PeerAllowedReactions(peer);
+	allowed.paidEnabled = allowed.paidEnabled && !Telescope::kHideStars;
 	const auto limit = UniqueReactionsLimit(peer);
 	const auto premiumPossible = session->premiumPossible();
 	const auto limited = (all.size() >= limit) && [&] {

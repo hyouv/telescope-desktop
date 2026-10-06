@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_channel.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_credits.h"
 #include "api/api_global_privacy.h"
@@ -1215,11 +1216,11 @@ const Data::AllowedReactions &ChannelData::allowedReactions() const {
 }
 
 bool ChannelData::hasActiveStories() const {
-	return flags() & Flag::HasActiveStories;
+	return !Telescope::kHideStories && (flags() & Flag::HasActiveStories);
 }
 
 bool ChannelData::hasUnreadStories() const {
-	return flags() & Flag::HasUnreadStories;
+	return !Telescope::kHideStories && (flags() & Flag::HasUnreadStories);
 }
 
 bool ChannelData::hasActiveVideoStream() const {

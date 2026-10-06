@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "main/main_app_config.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "api/api_authorizations.h"
 #include "apiwrap.h"
@@ -82,11 +83,13 @@ const std::vector<QString> &AppConfig::startRefPrefixes() {
 }
 
 bool AppConfig::starrefSetupAllowed() const {
-	return get<bool>(u"starref_program_allowed"_q, false);
+	return !Telescope::kHideMonetization
+		&& get<bool>(u"starref_program_allowed"_q, false);
 }
 
 bool AppConfig::starrefJoinAllowed() const {
-	return get<bool>(u"starref_connect_allowed"_q, false);
+	return !Telescope::kHideMonetization
+		&& get<bool>(u"starref_connect_allowed"_q, false);
 }
 
 int AppConfig::starrefCommissionMin() const {

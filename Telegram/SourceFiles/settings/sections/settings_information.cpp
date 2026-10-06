@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "settings/sections/settings_information.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "settings/sections/settings_main.h"
 #include "settings/settings_builder.h"
@@ -569,11 +570,13 @@ void SetupPersonalChannel(
 
 	SetupChatAutomation(container, controller, self, targets);
 
-	const auto colorButton = AddPeerColorButton(
-		container,
-		controller->uiShow(),
-		self,
-		st::settingsColorButton);
+	const auto colorButton = Telescope::kHidePeerColors
+		? (Ui::SettingsButton*)nullptr
+		: AddPeerColorButton(
+			container,
+			controller->uiShow(),
+			self,
+			st::settingsColorButton).get();
 	if (targets) {
 		targets->channelButton = channelButton;
 		targets->colorButton = colorButton;

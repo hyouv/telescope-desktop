@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/star_gift_box.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "boxes/star_gift_cover_box.h"
 
@@ -2469,6 +2470,9 @@ std::vector<not_null<UserData*>> CollectGiftFrequentUsers(
 
 void ChooseStarGiftRecipient(
 		not_null<Window::SessionController*> window) {
+	if (Telescope::kHideGifts) {
+		return;
+	}
 	const auto session = &window->session();
 	session->promoSuggestions().requestContactBirthdays([=] {
 		auto controller = std::make_unique<Controller>(
@@ -2501,7 +2505,7 @@ void ChooseStarGiftRecipient(
 void ShowStarGiftBox(
 		not_null<Window::SessionController*> controller,
 		not_null<PeerData*> peer) {
-	if (controller->showFrozenError()) {
+	if (Telescope::kHideGifts || controller->showFrozenError()) {
 		return;
 	}
 

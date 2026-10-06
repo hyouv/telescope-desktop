@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/profile/info_profile_shared_media_classic.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "core/ui_integration.h"
 #include "data/components/recent_shared_media_gifts.h"
@@ -341,8 +342,12 @@ object_ptr<Ui::SlideWrap<Ui::RpWidget>> SetupSharedMediaClassic(
 	};
 
 	if (!topic) {
-		addStoriesButton(peer, st::infoIconMediaStories);
-		addPeerGiftsButton(peer, st::infoIconMediaGifts);
+		if (!Telescope::kHideStories) {
+			addStoriesButton(peer, st::infoIconMediaStories);
+		}
+		if (!Telescope::kHideProfileGifts) {
+			addPeerGiftsButton(peer, st::infoIconMediaGifts);
+		}
 		addSavedSublistButton(peer, st::infoIconMediaSaved);
 	}
 	addMediaButton(MediaType::Photo, st::infoIconMediaPhoto);

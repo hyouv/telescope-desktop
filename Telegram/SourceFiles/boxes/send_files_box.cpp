@@ -6,6 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/send_files_box.h"
+#include "telescope/telescope.h" // Telescope
 
 #include "lang/lang_keys.h"
 #include "storage/localimageloader.h"
@@ -1096,7 +1097,8 @@ bool SendFilesBox::canMoveCaptionInCurrentSendWay() const {
 bool SendFilesBox::canChangePrice() const {
 	const auto way = _sendWay.current();
 	const auto broadcast = _toPeer->asBroadcast();
-	return broadcast
+	return !Telescope::kHideStars
+		&& broadcast
 		&& broadcast->canPostPaidMedia()
 		&& _list.canChangePrice(
 			way.groupFiles() && way.sendImagesAsPhotos(),

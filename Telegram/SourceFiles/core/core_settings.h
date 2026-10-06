@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "core/core_settings_proxy.h"
+#include "telescope/telescope.h" // Telescope
 #include "media/media_common.h"
 #include "dialogs/ui/dialogs_quick_action.h"
 #include "ui/widgets/chat_filters_tabs_mode.h"
@@ -498,7 +499,7 @@ public:
 		_suggestStickersByEmoji = value;
 	}
 	[[nodiscard]] bool suggestAnimatedEmoji() const {
-		return _suggestAnimatedEmoji;
+		return !Telescope::kHideEmojiSuggestions && _suggestAnimatedEmoji;
 	}
 	void setSuggestAnimatedEmoji(bool value) {
 		_suggestAnimatedEmoji = value;
