@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Restore Libraries
         id: libs
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ github.workspace }}\TBuild\Libraries
           key: telescope-libs-keepwarm-never-matches
@@ -26,7 +26,7 @@ jobs:
 
       - name: Restore ThirdParty
         id: thirdparty
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ github.workspace }}\TBuild\ThirdParty
           key: telescope-thirdparty-keepwarm-never-matches

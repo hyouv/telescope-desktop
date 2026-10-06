@@ -87,7 +87,7 @@ jobs:
 
       - name: Restore ThirdParty
         id: thirdparty
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.TBUILD }}\ThirdParty
           key: telescope-thirdparty-${{ env.CACHE_KEY }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Restore Libraries
         id: libraries
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.TBUILD }}\Libraries
           key: telescope-libs-${{ env.CACHE_KEY }}
@@ -115,14 +115,14 @@ jobs:
       # Complete libraries get the exact key, which the build job requires.
       - name: Save Libraries
         if: success() && steps.libraries.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ${{ env.TBUILD }}\Libraries
           key: telescope-libs-${{ env.CACHE_KEY }}
 
       - name: Save ThirdParty
         if: success() && steps.thirdparty.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ${{ env.TBUILD }}\ThirdParty
           key: telescope-thirdparty-${{ env.CACHE_KEY }}
@@ -131,14 +131,14 @@ jobs:
       # prepare.py skips every library already built, so a rerun continues from there.
       - name: Save partial Libraries
         if: (failure() || cancelled()) && steps.libraries.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ${{ env.TBUILD }}\Libraries
           key: telescope-libs-${{ env.CACHE_KEY }}-partial-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Save partial ThirdParty
         if: (failure() || cancelled()) && steps.thirdparty.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ${{ env.TBUILD }}\ThirdParty
           key: telescope-thirdparty-${{ env.CACHE_KEY }}-partial-${{ github.run_id }}-${{ github.run_attempt }}
@@ -155,14 +155,14 @@ jobs:
       - *nuget
 
       - name: Restore ThirdParty
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.TBUILD }}\ThirdParty
           key: telescope-thirdparty-${{ needs.libs.outputs.cache_key }}
           fail-on-cache-miss: true
 
       - name: Restore Libraries
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.TBUILD }}\Libraries
           key: telescope-libs-${{ needs.libs.outputs.cache_key }}
