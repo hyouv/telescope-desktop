@@ -1,0 +1,252 @@
+# Telescope: Windows x64 release build.
+# Job "libs" builds the third-party libraries (Qt, ffmpeg, ...) with Telegram's own
+# prepare script and caches them; a cold run takes hours and may need a rerun, since
+# prepare.py resumes from what the cache already holds. Job "build" compiles Telescope,
+# signs the update package with our own key and makes the installer and portable zip.
+name: Telescope build
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: "Telescope revision on top of the upstream version (0-9)"
+        default: "0"
+      release:
+        description: "Create a draft release"
+        type: boolean
+        default: false
+      notes:
+        description: "Release notes"
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: telescope-build
+  cancel-in-progress: false
+
+env:
+  PREPARE_PATH: Telegram/build/prepare/prepare.py
+
+defaults:
+  run:
+    shell: cmd
+
+jobs:
+  libs:
+    runs-on: windows-latest
+    timeout-minutes: 360
+    outputs:
+      cache_key: ${{ steps.setup.outputs.cache_key }}
+    steps:
+      - &dirs
+        name: Directories
+        run: |
+          mkdir %userprofile%\TBuild\Libraries
+          mklink /d %GITHUB_WORKSPACE%\TBuild %userprofile%\TBuild
+          echo TBUILD=%GITHUB_WORKSPACE%\TBuild>>%GITHUB_ENV%
+          echo LibrariesPath=%GITHUB_WORKSPACE%\TBuild\Libraries\win64>>%GITHUB_ENV%
+          echo REPO=%GITHUB_WORKSPACE%\TBuild\tdesktop>>%GITHUB_ENV%
+
+      - &checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          path: TBuild\tdesktop
+
+      - &setup
+        name: Set up
+        id: setup
+        shell: bash
+        run: |
+          DOC=$REPO/docs/building-win.md
+          SDK="$(grep "SDK version" $DOC | sed -r 's/.*\*\*(.*)\*\* SDK version.*/\1/')"
+          echo "SDK=$SDK" >> $GITHUB_ENV
+          sed -i '/CMAKE_${lang}_FLAGS_DEBUG_INIT/s/${_Zi}//' "$PROGRAMFILES"/CMake/share/cmake*/Modules/Platform/Windows-MSVC.cmake
+          key=$( { sha256sum $REPO/$PREPARE_PATH | awk '{print $1}'; echo "$SDK"; } | sha256sum | awk '{print $1}')
+          echo "CACHE_KEY=$key" >> $GITHUB_ENV
+          echo "cache_key=$key" >> $GITHUB_OUTPUT
+          git config --global user.email "telescope-bot@users.noreply.github.com"
+          git config --global user.name "telescope-bot"
+
+      - &msvc
+        uses: Eden-CI/msvc-dev-cmd@1bd71f95d6f3d1b2b3395b335cc63bcdc90cf223
+        with:
+          arch: x64
+          sdk: ${{ env.SDK }}
+          toolset: "14.44"
+
+      - &nuget
+        name: NuGet sources
+        run: |
+          nuget sources Disable -Name "Microsoft Visual Studio Offline Packages"
+          nuget sources Add -Source https://api.nuget.org/v3/index.json & exit 0
+
+      - name: Restore ThirdParty
+        id: thirdparty
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.TBUILD }}\ThirdParty
+          key: telescope-thirdparty-${{ env.CACHE_KEY }}
+          restore-keys: telescope-thirdparty-
+
+      - name: Restore Libraries
+        id: libraries
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.TBUILD }}\Libraries
+          key: telescope-libs-${{ env.CACHE_KEY }}
+          restore-keys: telescope-libs-
+
+      - name: Libraries
+        if: steps.libraries.outputs.cache-hit != 'true'
+        timeout-minutes: 320
+        run: |
+          python %REPO%\%PREPARE_PATH% silent
+
+      - name: Free disk space in Libraries
+        if: always() && steps.libraries.outputs.cache-hit != 'true'
+        shell: bash
+        run: find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.dll' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -path '*/nv-codec-headers/*' -o -path '*/mkspecs/*' -o -path '*/plugins/*' -o -path '*/translations/*' ')' -type f ')' -o -empty ')' -delete || true
+
+      # Complete libraries get the exact key, which the build job requires.
+      - name: Save Libraries
+        if: success() && steps.libraries.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.TBUILD }}\Libraries
+          key: telescope-libs-${{ env.CACHE_KEY }}
+
+      - name: Save ThirdParty
+        if: success() && steps.thirdparty.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.TBUILD }}\ThirdParty
+          key: telescope-thirdparty-${{ env.CACHE_KEY }}
+
+      # A failed or timed-out run saves its progress under a run-specific key:
+      # prepare.py skips every library already built, so a rerun continues from there.
+      - name: Save partial Libraries
+        if: (failure() || cancelled()) && steps.libraries.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.TBUILD }}\Libraries
+          key: telescope-libs-${{ env.CACHE_KEY }}-partial-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Save partial ThirdParty
+        if: (failure() || cancelled()) && steps.thirdparty.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.TBUILD }}\ThirdParty
+          key: telescope-thirdparty-${{ env.CACHE_KEY }}-partial-${{ github.run_id }}-${{ github.run_attempt }}
+
+  build:
+    needs: libs
+    runs-on: windows-latest
+    timeout-minutes: 300
+    steps:
+      - *dirs
+      - *checkout
+      - *setup
+      - *msvc
+      - *nuget
+
+      - name: Restore ThirdParty
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.TBUILD }}\ThirdParty
+          key: telescope-thirdparty-${{ needs.libs.outputs.cache_key }}
+          fail-on-cache-miss: true
+
+      - name: Restore Libraries
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.TBUILD }}\Libraries
+          key: telescope-libs-${{ needs.libs.outputs.cache_key }}
+          fail-on-cache-miss: true
+
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          v=$(awk '$1=="AppVersion"{print $2}' $REPO/Telegram/build/version)
+          s=$(awk '$1=="AppVersionStr"{print $2}' $REPO/Telegram/build/version)
+          rev=${{ inputs.revision }}
+          [[ "$rev" =~ ^[0-9]$ ]] || { echo "revision must be 0-9"; exit 1; }
+          full=$(( (v << 32) | rev ))
+          name="$s"; [ "$rev" != 0 ] && name="$s-r$rev"
+          echo "version=$v" >> $GITHUB_OUTPUT; echo "str=$s" >> $GITHUB_OUTPUT
+          echo "rev=$rev" >> $GITHUB_OUTPUT; echo "full=$full" >> $GITHUB_OUTPUT
+          echo "name=$name" >> $GITHUB_OUTPUT; echo "tag=desktop-v$name" >> $GITHUB_OUTPUT
+          echo "Telescope $name (update version $full)"
+
+      - name: Build
+        env:
+          API_ID: ${{ secrets.TELESCOPE_API_ID }}
+          API_HASH: ${{ secrets.TELESCOPE_API_HASH }}
+        run: |
+          if "%API_ID%"=="" (echo TELESCOPE_API_ID secret is not set & exit /b 1)
+          cd %REPO%\Telegram
+          call configure.bat x64 ^
+            -D TDESKTOP_API_ID=%API_ID% ^
+            -D TDESKTOP_API_HASH=%API_HASH% ^
+            -D TELESCOPE_REVISION=${{ steps.version.outputs.rev }} ^
+            -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF ^
+            -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON || exit /b 1
+          cmake --build ..\out --config Release --target Telegram --parallel || exit /b 1
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+          "${env:ProgramFiles(x86)}\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Package
+        env:
+          UPDATE_KEY: ${{ secrets.TELESCOPE_UPDATE_KEY }}
+        shell: bash
+        run: |
+          set -e
+          [ -n "$UPDATE_KEY" ] || { echo "TELESCOPE_UPDATE_KEY secret is not set"; exit 1; }
+          cd "$REPO/out/Release"
+          v=${{ steps.version.outputs.version }}; s=${{ steps.version.outputs.str }}
+          rev=${{ steps.version.outputs.rev }}; name=${{ steps.version.outputs.name }}
+          printf '%s\n' "$UPDATE_KEY" > "$RUNNER_TEMP/update-key.pem"
+          counter=(); [ "$rev" != 0 ] && counter=(-counter "$rev")
+          ./Packer.exe -version "$v" -path Telegram.exe -path Updater.exe -path 'modules\x64\d3d\d3dcompiler_47.dll' \
+            -target win64 -channel stable "${counter[@]}" -keys-loc "$(cygpath -w "$REPO/Telegram/Resources/update_telescope")" \
+            -local-key "$(cygpath -w "$RUNNER_TEMP/update-key.pem")" -local-key-id tl-2026a
+          rm -f "$RUNNER_TEMP/update-key.pem"
+          test -f "td-update-win-x64-$v"
+          iscc //dMyAppVersion="$s" //dMyAppVersionZero="$s" //dMyAppVersionFull="$name" \
+            //dReleasePath="$(cygpath -w "$PWD")" //dMyBuildTarget=win64 \
+            //dMyOutputBaseFilename="telescope-setup-x64-$name" "$(cygpath -w "$REPO/Telegram/build/setup.iss")"
+          mkdir -p portable/Telescope/modules/x64/d3d
+          cp Telegram.exe Updater.exe portable/Telescope/
+          cp modules/x64/d3d/d3dcompiler_47.dll portable/Telescope/modules/x64/d3d/
+          (cd portable && 7z a -tzip -mx=9 "../telescope-portable-x64-$name.zip" Telescope > /dev/null)
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp "td-update-win-x64-$v" "telescope-setup-x64-$name.exe" "telescope-portable-x64-$name.zip" "$GITHUB_WORKSPACE/dist/"
+          cd "$GITHUB_WORKSPACE/dist"
+          echo "${{ steps.version.outputs.full }}" > update-version.txt
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS; ls -la
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telescope-desktop-${{ steps.version.outputs.name }}
+          path: dist\*
+          retention-days: 14
+
+      - name: Draft release
+        if: inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
+        shell: bash
+        run: |
+          tag=${{ steps.version.outputs.tag }}
+          gh release view "$tag" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1 && { echo "release $tag already exists"; exit 1; }
+          gh release create "$tag" -R "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" \
+            --title "Telescope Desktop ${{ steps.version.outputs.name }}" --notes "$NOTES" dist/*

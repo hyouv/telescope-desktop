@@ -20,6 +20,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define TDESKTOP_UPDATE_CHANNEL 0
 #endif // TDESKTOP_UPDATE_CHANNEL
 
+#ifndef TELESCOPE_REVISION
+#define TELESCOPE_REVISION 0
+#endif // TELESCOPE_REVISION
+
 #ifndef TDESKTOP_CANARY_COUNTER
 #define TDESKTOP_CANARY_COUNTER 0
 #endif // TDESKTOP_CANARY_COUNTER
@@ -68,7 +72,7 @@ inline constexpr auto CanaryMetadataMessageId
 [[nodiscard]] inline constexpr quint64 RunningUpdateVersion() {
 	return Updates::MakeUpdateVersion(
 		quint32(AppVersion),
-		CanaryBuildCounter);
+		BuildIsCanary ? CanaryBuildCounter : quint32(TELESCOPE_REVISION)); // Telescope: revision as the counter
 }
 
 [[nodiscard]] inline QString CanaryVersionSuffix() {

@@ -25,6 +25,7 @@ get_filename_component(src_loc SourceFiles REALPATH)
 get_filename_component(res_loc Resources REALPATH)
 
 include(cmake/telegram_options.cmake)
+include(cmake/telescope_options.cmake)
 include(cmake/lib_ffmpeg.cmake)
 include(cmake/lib_stripe.cmake)
 include(cmake/lib_tgcalls.cmake)
@@ -54,7 +55,7 @@ if (WIN32)
 endif()
 
 include(cmake/generate_update_keys.cmake)
-generate_update_keys(Telegram ${res_loc}/update)
+generate_update_keys(Telegram ${res_loc}/update_telescope) # Telescope: own update keys
 
 if (DESKTOP_APP_TEST_APPS OR DESKTOP_APP_SPECIAL_TARGET)
     include(cmake/test_update_verify.cmake)

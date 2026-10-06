@@ -1,9 +1,10 @@
-#define MyAppShortName "Telegram"
-#define MyAppName "Telegram Desktop"
-#define MyAppPublisher "Telegram FZ-LLC"
-#define MyAppURL "https://desktop.telegram.org"
+; Telescope: own name and AppId, so it installs next to the official app
+#define MyAppShortName "Telescope"
+#define MyAppName "Telescope"
+#define MyAppPublisher "Telescope"
+#define MyAppURL "https://dl.hyv.moe"
 #define MyAppExeName "Telegram.exe"
-#define MyAppId "53F49750-6209-4FBF-9CA8-7A333C87D1ED"
+#define MyAppId "90EB5C6C-B797-42AD-8341-9EBCED2AD101"
 #define CurrentYear GetDateTimeString('yyyy','','')
 
 [Setup]
@@ -34,7 +35,6 @@ CloseApplications=force
 DisableDirPage=no
 DisableProgramGroupPage=no
 WizardStyle=modern
-SignTool=sha256
 
 #ifndef MyOutputBaseFilename
   #if MyBuildTarget == "winarm"

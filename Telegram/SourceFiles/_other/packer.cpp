@@ -679,7 +679,7 @@ int main(int argc, char *argv[])
 		} else if (V2KeysLoc.isEmpty()) {
 			cout << "The -keys-loc param is required for -channel packing!\n";
 			return -1;
-		} else if (canary != (V2Counter > 0)) {
+		} else if (canary && !V2Counter) { // Telescope: stable may carry the revision as -counter
 			cout << "Canary channels require a positive -counter, others require none!\n";
 			return -1;
 		} else if (!V2EmbedSignatures.empty()) {

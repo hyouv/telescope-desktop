@@ -677,7 +677,9 @@ QString ExtractFilename(const QString &url) {
 				tempDirPath,
 				version,
 				0,
-				canary ? verified->envelope.version : 0)) {
+				(canary || Updates::UpdateVersionCounter(verified->envelope.version)) // Telescope: revisions need the full version
+					? verified->envelope.version
+					: 0)) {
 			return false;
 		}
 	}
@@ -1116,7 +1118,7 @@ QString HttpChecker::validateLatestUrl(
 		QString url) const {
 	const auto myVersion = isAvailableAlpha
 		? cAlphaVersion()
-		: uint64(AppVersion);
+		: RunningUpdateVersion(); // Telescope: compare with the revision
 	const auto validVersion = (cAlphaVersion() || !isAvailableAlpha);
 	if (!validVersion || availableVersion <= myVersion) {
 		return QString();
@@ -1998,9 +2000,11 @@ void Updater::start(bool forceWait) {
 		}
 		startImplementation(
 			&_mtpImplementation,
-			std::make_unique<MtpChecker>(
-				LookupCanaryPrivateSession(_session),
-				_testing));
+			(BuildIsCanary // Telescope: no official MTP update feed
+				? std::make_unique<MtpChecker>(
+					LookupCanaryPrivateSession(_session),
+					_testing)
+				: nullptr));
 
 		_checking.fire({});
 	} else {
@@ -2287,7 +2291,7 @@ bool checkReadyUpdate() {
 				ClearAll();
 				return false;
 			}
-			if (!BuildIsCanary || canaryVersion <= RunningUpdateVersion()) {
+			if (canaryVersion <= RunningUpdateVersion()) { // Telescope: also our revisions, the channel was checked on download
 				LOG(("Update Error: cant install canary version %1 having version %2").arg(canaryVersion).arg(RunningUpdateVersion()));
 				ClearAll();
 				return false;
