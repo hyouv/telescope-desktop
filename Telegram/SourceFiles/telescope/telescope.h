@@ -1,7 +1,7 @@
 /*
 Telescope: switches for what this fork removes from Telegram Desktop.
 Upstream code checks them with one-line patches, so merges stay small.
-See the infra repo, docs/desktop-feature-removal.md.
+See the infra repo, docs/feature-removal.md.
 */
 #pragma once
 
