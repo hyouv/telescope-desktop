@@ -1,0 +1,72 @@
+# Telescope: daily check for a new stable Telegram Desktop release (the latest non-prerelease
+# on telegramdesktop/tdesktop). Merges its tag into `telescope`; on success starts a release
+# build, on conflict opens an issue.
+name: Telescope sync upstream
+
+on:
+  schedule:
+    - cron: "27 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: telescope
+          fetch-depth: 0
+
+      - name: Find new release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh api repos/telegramdesktop/tdesktop/releases/latest --jq .tag_name)
+          echo "Latest upstream release: $tag"
+          git remote add tdesktop https://github.com/telegramdesktop/tdesktop.git
+          git fetch --no-tags tdesktop master "refs/tags/$tag:refs/tags/$tag"
+          git push origin refs/remotes/tdesktop/master:refs/heads/upstream
+          if git merge-base --is-ancestor "refs/tags/$tag" HEAD; then echo "Nothing new"; exit 0; fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # Outputs are words, not 0/1: when this step is skipped its output is empty,
+      # and Actions coerces empty == '0' to true.
+      - name: Merge
+        id: merge
+        if: steps.check.outputs.tag
+        run: |
+          git config user.name "telescope-bot"
+          git config user.email "telescope-bot@users.noreply.github.com"
+          tag=${{ steps.check.outputs.tag }}
+          if git merge --no-edit -m "Merge upstream $tag" "refs/tags/$tag"; then
+            git push origin HEAD:telescope
+            echo "result=merged" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > conflicts.txt
+            git merge --abort
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Start release build
+        if: steps.merge.outputs.result == 'merged'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run telescope-build.yml --ref telescope \
+            -f revision=0 -f release=true -f notes="Upstream: Telegram Desktop ${{ steps.check.outputs.tag }}"
+
+      - name: Report conflict
+        if: steps.merge.outputs.result == 'conflict'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Upstream merge conflict: ${{ steps.check.outputs.tag }}"
+          if gh issue list --state open --search "$title in:title" --json number --jq '.[0].number' | grep -q .; then exit 0; fi
+          { echo "Merging \`${{ steps.check.outputs.tag }}\` into \`telescope\` failed. Conflicting files:"; echo; sed 's/^/- /' conflicts.txt; } > body.md
+          gh issue create --title "$title" --body-file body.md

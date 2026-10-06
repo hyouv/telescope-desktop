@@ -1,0 +1,39 @@
+# Telescope: GitHub drops caches that haven't been used for 7 days. Restoring the library
+# caches every few days keeps them alive between releases, so a build doesn't have to
+# rebuild Qt and the other libraries from scratch.
+name: Telescope keep cache warm
+
+on:
+  schedule:
+    - cron: "51 4 */4 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  touch:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Restore Libraries
+        id: libs
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}\TBuild\Libraries
+          key: telescope-libs-keepwarm-never-matches
+          restore-keys: telescope-libs-
+
+      - name: Restore ThirdParty
+        id: thirdparty
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}\TBuild\ThirdParty
+          key: telescope-thirdparty-keepwarm-never-matches
+          restore-keys: telescope-thirdparty-
+
+      - name: Report
+        shell: bash
+        run: |
+          echo "libraries: ${{ steps.libs.outputs.cache-matched-key || 'none' }}"
+          echo "thirdparty: ${{ steps.thirdparty.outputs.cache-matched-key || 'none' }}"

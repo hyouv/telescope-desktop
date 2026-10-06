@@ -1,0 +1,84 @@
+# Telescope: when a draft release made by telescope-build.yml is published on GitHub,
+# upload it to Cloudflare R2 (dl.hyv.moe/desktop) and point the in-app updater at it.
+name: Telescope publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to (re)publish"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: startsWith(github.event.release.tag_name || inputs.tag, 'desktop-v')
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      BUCKET: telescope-dl
+      BASE_URL: https://dl.hyv.moe
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Download release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D out
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json body --jq .body > body.md
+          ls -la out
+
+      - name: Verify and build metadata
+        run: |
+          cd out
+          sha256sum -c SHA256SUMS
+          full=$(cat update-version.txt)
+          upd=$(ls td-update-win-x64-*); setup=$(ls telescope-setup-x64-*.exe); zip=$(ls telescope-portable-x64-*.zip)
+          name=${setup#telescope-setup-x64-}; name=${name%.exe}
+          sha() { grep " \*\?$1\$" SHA256SUMS | cut -d' ' -f1; }
+          # read by the in-app updater: Platform::AutoUpdateVersion() is 6 on Windows
+          jq -n --arg v "$full" --arg link "/win64/$full/$upd" \
+            '{win64: {stable: {released: $v, link: $link}}}' > current6
+          # release bodies edited on github.com use CRLF
+          notes=$(tr -d '\r' < ../body.md | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+          jq -n --arg v "$name" --arg uv "$full" --arg notes "$notes" --arg date "$(date -u +%FT%TZ)" \
+                --arg setup "$BASE_URL/desktop/$setup" --arg setup_sha "$(sha "$setup")" \
+                --arg zip "$BASE_URL/desktop/$zip" --arg zip_sha "$(sha "$zip")" \
+                '{version:$v, update_version:$uv, changelog:$notes, date:$date,
+                  setup:{url:$setup, sha256:$setup_sha}, portable:{url:$zip, sha256:$zip_sha}}' > latest.json
+          cat current6 latest.json
+          { echo "FULL=$full"; echo "UPD=$upd"; echo "SETUP=$setup"; echo "ZIP=$zip"; } >> "$GITHUB_ENV"
+
+      - name: Upload to R2
+        run: |
+          w="npx -y wrangler@4 r2 object put"
+          immutable="public, max-age=31536000, immutable"
+          $w "$BUCKET/desktop/win64/$FULL/$UPD" --file "out/$UPD" --remote \
+             --content-type application/octet-stream --cache-control "$immutable"
+          $w "$BUCKET/desktop/$SETUP" --file "out/$SETUP" --remote \
+             --content-type application/vnd.microsoft.portable-executable --cache-control "$immutable"
+          $w "$BUCKET/desktop/$ZIP" --file "out/$ZIP" --remote \
+             --content-type application/zip --cache-control "$immutable"
+          $w "$BUCKET/desktop/Telescope-Setup.exe" --file "out/$SETUP" --remote \
+             --content-type application/vnd.microsoft.portable-executable --cache-control "public, max-age=300" \
+             --content-disposition 'attachment; filename="Telescope-Setup.exe"'
+          $w "$BUCKET/desktop/Telescope-Portable.zip" --file "out/$ZIP" --remote \
+             --content-type application/zip --cache-control "public, max-age=300" \
+             --content-disposition 'attachment; filename="Telescope-Portable.zip"'
+          $w "$BUCKET/desktop/latest.json" --file out/latest.json --remote \
+             --content-type application/json --cache-control "no-cache"
+          # the updater's pointer last, so clients never see a version whose package isn't there yet
+          $w "$BUCKET/desktop/current6" --file out/current6 --remote \
+             --content-type application/json --cache-control "no-cache"
+
+      - name: Check
+        run: |
+          sleep 5
+          curl -fsS "$BASE_URL/desktop/current6"; echo
+          curl -fsSI "$BASE_URL/desktop/win64/$FULL/$UPD" | grep -iE '^(HTTP|content-length)'
+          curl -fsSI "$BASE_URL/desktop/Telescope-Setup.exe" | grep -iE '^(HTTP|content-length)'
