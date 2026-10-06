@@ -50,7 +50,7 @@ jobs:
           echo REPO=%GITHUB_WORKSPACE%\TBuild\tdesktop>>%GITHUB_ENV%
 
       - &checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
           path: TBuild\tdesktop
