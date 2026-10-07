@@ -9,3 +9,5 @@ target_compile_definitions(Telegram
 PRIVATE
     TELESCOPE_REVISION=${TELESCOPE_REVISION}
 )
+
+option(TELESCOPE_PACKER "Build Packer, which signs update packages with our own key." OFF)

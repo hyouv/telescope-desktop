@@ -232,6 +232,7 @@ jobs:
             -D TDESKTOP_API_ID=%API_ID% ^
             -D TDESKTOP_API_HASH=%API_HASH% ^
             -D TELESCOPE_REVISION=${{ steps.version.outputs.rev }} ^
+            -D TELESCOPE_PACKER=ON ^
             -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF ^
             -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON || exit /b 1
           rem No --parallel: each project already compiles with /MP, and running

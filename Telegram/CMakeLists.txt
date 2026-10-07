@@ -2572,7 +2572,7 @@ if (NOT DESKTOP_APP_DISABLE_AUTOUPDATE AND NOT build_macstore AND NOT build_wins
         )
     endif()
 
-    if (DESKTOP_APP_SPECIAL_TARGET)
+    if (DESKTOP_APP_SPECIAL_TARGET OR TELESCOPE_PACKER) # Telescope: our CI signs updates with Packer
         add_executable(Packer)
         init_target(Packer)
 
@@ -2598,6 +2598,9 @@ if (NOT DESKTOP_APP_DISABLE_AUTOUPDATE AND NOT build_macstore AND NOT build_wins
 
         if (DESKTOP_APP_USE_PACKAGED)
             target_compile_definitions(Packer PRIVATE PACKER_USE_PACKAGED)
+        endif()
+        if (TELESCOPE_PACKER) # Telescope: no DesktopPrivate keys, v2 Ed25519 signing only
+            target_compile_definitions(Packer PRIVATE PACKER_DISABLE_PRIVATE)
         endif()
 
         set_target_properties(Packer PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${output_folder})
