@@ -183,6 +183,17 @@ jobs:
           key: telescope-libs-${{ needs.libs.outputs.cache_key }}
           fail-on-cache-miss: true
 
+      # The Release build's intermediate files don't fit in the runner's free space,
+      # so remove preinstalled SDKs we don't use.
+      - name: Free disk space
+        shell: pwsh
+        run: |
+          Get-PSDrive C,D | Format-Table Name,@{n='FreeGB';e={[math]::Round($_.Free/1GB,1)}}
+          foreach ($d in 'C:\Android','C:\ghcup','C:\hostedtoolcache\windows\go','C:\hostedtoolcache\windows\Ruby','C:\hostedtoolcache\windows\PyPy','C:\Program Files\PostgreSQL','C:\Program Files\MongoDB','C:\Miniconda','C:\rtools45','C:\selenium','C:\SeleniumWebDrivers') {
+            if (Test-Path $d) { cmd /c "rmdir /s /q `"$d`"" 2>$null }
+          }
+          Get-PSDrive C,D | Format-Table Name,@{n='FreeGB';e={[math]::Round($_.Free/1GB,1)}}
+
       - name: Version
         id: version
         shell: bash
