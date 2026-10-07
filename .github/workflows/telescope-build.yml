@@ -215,6 +215,9 @@ jobs:
           API_HASH: ${{ secrets.TELESCOPE_API_HASH }}
         run: |
           if "%API_ID%"=="" (echo TELESCOPE_API_ID secret is not set & exit /b 1)
+          rem Build output goes to D:, which has far more free space than C:.
+          mkdir D:\telescope-out
+          mklink /d %REPO%\out D:\telescope-out
           cd %REPO%\Telegram
           call configure.bat x64 ^
             -D TDESKTOP_API_ID=%API_ID% ^
@@ -222,7 +225,9 @@ jobs:
             -D TELESCOPE_REVISION=${{ steps.version.outputs.rev }} ^
             -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF ^
             -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON || exit /b 1
-          cmake --build ..\out --config Release --target Telegram --parallel || exit /b 1
+          rem No --parallel: each project already compiles with /MP, and running
+          rem several projects at once runs the compiler out of memory.
+          cmake --build ..\out --config Release --target Telegram || exit /b 1
 
       - name: Inno Setup
         shell: pwsh
