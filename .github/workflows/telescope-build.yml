@@ -194,6 +194,15 @@ jobs:
           }
           Get-PSDrive C,D | Format-Table Name,@{n='FreeGB';e={[math]::Round($_.Free/1GB,1)}}
 
+      # 16 GB of RAM isn't enough for four Release compiler processes sharing the big
+      # precompiled header ("out of heap space"); give Windows a large pagefile on D:.
+      - name: Pagefile
+        uses: al-cheb/configure-pagefile-action@9b6da52fb72a3c6147c1aad2df22d8d905681adc # v1.5
+        with:
+          minimum-size: 32GB
+          maximum-size: 48GB
+          disk-root: "D:"
+
       - name: Version
         id: version
         shell: bash
