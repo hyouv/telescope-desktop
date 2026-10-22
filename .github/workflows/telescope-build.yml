@@ -66,7 +66,8 @@ jobs:
           SDK="$(grep "SDK version" $DOC | sed -r 's/.*\*\*(.*)\*\* SDK version.*/\1/')"
           echo "SDK=$SDK" >> $GITHUB_ENV
           sed -i '/CMAKE_${lang}_FLAGS_DEBUG_INIT/s/${_Zi}//' "$PROGRAMFILES"/CMake/share/cmake*/Modules/Platform/Windows-MSVC.cmake
-          key=$( { sha256sum $REPO/$PREPARE_PATH | awk '{print $1}'; echo "$SDK"; } | sha256sum | awk '{print $1}')
+          # The number after the SDK is bumped to replace caches whose contents went bad.
+          key=$( { sha256sum $REPO/$PREPARE_PATH | awk '{print $1}'; echo "$SDK"; echo 2; } | sha256sum | awk '{print $1}')
           echo "CACHE_KEY=$key" >> $GITHUB_ENV
           echo "cache_key=$key" >> $GITHUB_OUTPUT
           git config --global user.email "telescope-bot@users.noreply.github.com"
@@ -137,16 +138,29 @@ jobs:
           key: telescope-libs-${{ env.CACHE_KEY }}
           restore-keys: telescope-libs-
 
+      # Caches pruned before the Rust sources were kept lack the generated wallet binding
+      # and the sources to rebuild it; removing those stages makes prepare.py build them again.
+      - name: Repair pruned Rust stages
+        if: steps.libraries.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          cd "$LibrariesPath"
+          if [ -d tdesktop_rust ] && [ ! -f tdesktop_rust/out/src/wallet_engine/wallet_engine.cpp ]; then
+            rm -rf tlottie wallet-engine tdesktop_rust
+          fi
+
       - name: Libraries
         if: steps.libraries.outputs.cache-hit != 'true'
         timeout-minutes: 320
         run: |
           python %REPO%\%PREPARE_PATH% silent
 
+      # tdesktop_rust/out has the wallet binding's generated source, which the app build compiles,
+      # and tlottie and wallet-engine are the sources tdesktop_rust is rebuilt from.
       - name: Free disk space in Libraries
         if: always() && steps.libraries.outputs.cache-hit != 'true'
         shell: bash
-        run: df -h /c /d || true; find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.dll' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -path '*/nv-codec-headers/*' -o -path '*/mkspecs/*' -o -path '*/plugins/*' -o -path '*/translations/*' ')' -type f ')' -o -empty ')' -delete || true
+        run: df -h /c /d || true; find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.dll' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -path '*/nv-codec-headers/*' -o -path '*/mkspecs/*' -o -path '*/plugins/*' -o -path '*/translations/*' -o -path '*/tdesktop_rust/out/*' -o -path '*/tlottie/*' -o -path '*/wallet-engine/*' ')' -type f ')' -o -empty ')' -delete || true
 
       # Complete libraries get the exact key, which the build job requires.
       - name: Save Libraries
